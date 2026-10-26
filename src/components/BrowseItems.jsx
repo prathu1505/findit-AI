@@ -215,12 +215,30 @@ export default function BrowseItems({ items, onSelectItem, onNavigate }) {
                 style={{ cursor: 'pointer' }}
               >
                 <div className="item-image-wrapper">
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    className="item-image"
-                    loading="lazy"
-                  />
+                  
+{item.imageUrl ? (
+  <img
+    src={item.imageUrl}
+    alt={item.name}
+    className="item-image"
+    loading="lazy"
+  />
+) : (
+  <div
+    className="item-image"
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#f1f5f9',
+      color: '#64748b',
+      fontSize: '14px'
+    }}
+  >
+    No photo uploaded
+  </div>
+)}
+
                   <div className="item-badge-pos">
                     <span className={`status-badge ${item.type}`}>
                       {item.type === 'lost' ? 'Lost' : 'Found'}

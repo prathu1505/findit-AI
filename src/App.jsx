@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import HowItWorks from './components/HowItWorks';
@@ -10,19 +11,40 @@ import AIMatches from './components/AIMatches';
 import ItemDetailsModal from './components/ItemDetailsModal';
 import AuthModal from './components/AuthModal';
 import Footer from './components/Footer';
-import { initialItems, initialMatches } from './data/mockData';
+import { initialMatches } from './data/mockData';
+import { supabase } from './supabaseClient';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [reportInitialType, setReportInitialType] = useState('lost');
-  const [items, setItems] = useState(initialItems);
+  const [items, setItems] = useState([]);
   const [matches, setMatches] = useState(initialMatches);
   const [selectedItem, setSelectedItem] = useState(null);
-  
-  // Auth state
   const [currentUser, setCurrentUser] = useState(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login');
+
+  useEffect(() => {
+    loadItems();
+  }, []);
+
+  const loadItems = async () => {
+    const { data, error } = await supabase
+      .from('items')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading items:', error.message);
+      return;
+    }
+
+    setItems((data || []).map((item) => ({
+      ...item,
+      name: item.name || item.title,
+      imageUrl: item.imageUrl || item.image
+    })));
+  };
 
   const handleNavigate = (pageId) => {
     if (pageId === 'report-lost') {
@@ -40,6 +62,7 @@ export default function App() {
     } else {
       setCurrentPage(pageId);
     }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -52,42 +75,42 @@ export default function App() {
     setCurrentUser(null);
   };
 
-  const handleAddItem = (newItem) => {
-    // 1. Add item to state
-    setItems((prev) => [newItem, ...prev]);
+  const handleAddItem = async (newItem) => {
+    const itemToSave = {
+      id: String(newItem.id || Date.now()),
+      title: newItem.name || newItem.title,
+      description: newItem.description || '',
+      category: newItem.category || '',
+      type: newItem.type || 'lost',
+      location: newItem.location || '',
+      date: newItem.date || new Date().toISOString().slice(0, 10),
+      image: newItem.imageUrl || newItem.image || null
+    };
 
-    // 2. Intelligent matching check against existing items of the opposite type
-    const oppositeType = newItem.type === 'lost' ? 'found' : 'lost';
-    const candidates = items.filter(
-      (item) => item.type === oppositeType && item.category === newItem.category
-    );
+    const { data, error } = await supabase
+      .from('items')
+      .insert(itemToSave)
+      .select()
+      .single();
 
-    if (candidates.length > 0) {
-      const topCandidate = candidates[0];
-      const newMatch = {
-        id: `match-${Date.now()}`,
-        confidenceScore: 92,
-        lostItemId: newItem.type === 'lost' ? newItem.id : topCandidate.id,
-        foundItemId: newItem.type === 'found' ? newItem.id : topCandidate.id,
-        lostItemName: newItem.type === 'lost' ? newItem.name : topCandidate.name,
-        foundItemName: newItem.type === 'found' ? newItem.name : topCandidate.name,
-        locationDistance: 'Proximate community zone',
-        timeDifference: 'Reported recently',
-        matchFactors: [
-          { factor: 'Category & Keyword Correlation', status: 'high', details: `Both registered under "${newItem.category}"` },
-          { factor: 'Location Proximity', status: 'high', details: `Reports filed near ${newItem.location}` },
-          { factor: 'Attribute Consistency', status: 'medium', details: 'Matching visual description attributes' }
-        ],
-        explanation: `AI detected a high-probability match between newly reported "${newItem.name}" and existing listing "${topCandidate.name}".`
-      };
-
-      setMatches((prev) => [newMatch, ...prev]);
+    if (error) {
+      console.error('Error saving item:', error.message);
+      alert('Report save aagala. Please try again.');
+      return;
     }
+
+    const savedItem = {
+      ...data,
+      name: data.title,
+      imageUrl: data.image
+    };
+
+    setItems((prev) => [savedItem, ...prev]);
+    alert('Report successfully saved!');
   };
 
   return (
     <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Top Navigation */}
       <Navbar
         activePage={currentPage}
         onNavigate={handleNavigate}
@@ -97,7 +120,6 @@ export default function App() {
         matchesCount={matches.length}
       />
 
-      {/* Main View Router */}
       <main style={{ flex: 1 }}>
         {currentPage === 'home' && (
           <>
@@ -135,7 +157,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Item Details & Safe Contact Modal */}
       {selectedItem && (
         <ItemDetailsModal
           item={selectedItem}
@@ -144,17 +165,13 @@ export default function App() {
         />
       )}
 
-      {/* Login & Sign Up Modal */}
       <AuthModal
         isOpen={authModalOpen}
         initialMode={authMode}
         onClose={() => setAuthModalOpen(false)}
-        onLoginSuccess={(user) => {
-          setCurrentUser(user);
-        }}
+        onLoginSuccess={(user) => setCurrentUser(user)}
       />
 
-      {/* Footer */}
       <Footer onNavigate={handleNavigate} />
     </div>
   );
