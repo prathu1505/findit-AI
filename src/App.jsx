@@ -75,6 +75,9 @@ export default function App() {
     setCurrentUser(null);
   };
 
+  
+    
+
   const handleAddItem = async (newItem) => {
     const itemToSave = {
       id: String(newItem.id || Date.now()),
@@ -94,9 +97,9 @@ export default function App() {
       .single();
 
     if (error) {
-      console.error('Error saving item:', error.message);
-      alert('Report save aagala. Please try again.');
-      return;
+      console.error('Error saving item:', error);
+      alert('Report save aagala: ' + error.message);
+      return null;
     }
 
     const savedItem = {
@@ -107,7 +110,13 @@ export default function App() {
 
     setItems((prev) => [savedItem, ...prev]);
     alert('Report successfully saved!');
+
+    return savedItem;
   };
+
+
+
+   
 
   return (
     <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>

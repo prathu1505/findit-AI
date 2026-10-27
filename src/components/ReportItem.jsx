@@ -36,7 +36,7 @@ export default function ReportItem({ initialType = 'lost', onAddItem, onNavigate
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
       setErrorMsg('Please enter an item name.');
@@ -70,8 +70,14 @@ export default function ReportItem({ initialType = 'lost', onAddItem, onNavigate
       reporter: reporterName.trim() || 'Community Member'
     };
 
-    onAddItem(newItem);
-    setSubmittedItem(newItem);
+    
+    const savedItem = await onAddItem(newItem);
+
+if (!savedItem) {
+  return;
+}
+
+setSubmittedItem(savedItem);
     setErrorMsg('');
   };
 
